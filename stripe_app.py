@@ -6,8 +6,6 @@ from datetime import datetime, timedelta
 import streamlit as st
 
 # Load data function
-#stripe_key = "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"
-
 @st.cache
 def load_data(user_input:str) -> pd.DataFrame:
     # Set stripe API key
