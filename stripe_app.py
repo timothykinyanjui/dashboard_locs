@@ -11,7 +11,7 @@ def load_data(user_input:str) -> pd.DataFrame:
     stripe.api_key = user_input
 
     # Retrieve balance transactions (all payments by customers, payouts, fees and refunds)
-    bal_trans = stripe.BalanceTransaction.list(limit=3)
+    bal_trans = stripe.BalanceTransaction.list(limit = 3)
 
     # Loop to get all balance transcations
     data = pd.DataFrame()
@@ -24,8 +24,24 @@ def load_data(user_input:str) -> pd.DataFrame:
 
     # Create readable date from unix time
     data = data.assign(date = lambda x: x['created'].apply(lambda x: pd.to_datetime(x, unit = 's', utc = True)))
+
+    # Get charges data with customer names
+    charges = stripe.Charge.list(limit = 3)
+
+    # Loop to get all balance transcations
+    dataCharge = pd.DataFrame()
+
+    for char_iter in charges.auto_paging_iter():
+        
+        # Get the data in pandas frame
+        names = char_iter["billing_details"]["name"]
+        t_id = char_iter["balance_transaction"]
+        dataCharge = dataCharge.append(pd.DataFrame({'id': t_id, 'name': names}, index = [0]))
+
+    # Join the customer data
+    dataAll = data.merge(dataCharge, on = 'id', how = 'left')
     
-    return data
+    return dataAll
 
 # Use a wide page rather than center
 st.set_page_config(layout="wide")
@@ -37,9 +53,16 @@ st.title(f"Beth's Sisterlocs dashboard")
 st.sidebar.header("Enter text")
 user_input = st.sidebar.text_input("Enter text")
 
+# Select dates
 st.sidebar.header("Select dates of interest")
-d1 = st.sidebar.date_input('start date', min_value = datetime(2020,6,20).date(),  max_value = datetime.now().date(), value = datetime(2020,6,20))
-d2 = st.sidebar.date_input('end date', min_value = datetime(2020,6,20), max_value = datetime.now().date(), value = datetime.now().date())
+
+# Start date
+max_date = datetime.now().date()
+d1 = st.sidebar.date_input('start date', min_value = datetime(2020,6,20).date(),  max_value = max_date, value = datetime(2020,6,20))
+
+# End date
+d2 = st.sidebar.date_input('end date', min_value = d1, max_value = max_date, value = max_date)
+
 
 # Just show some data
 st.spinner(text='Loading the data ...')
@@ -70,23 +93,36 @@ elif add_selectbox == "Refunds":
 else:
     charge_data = dataAll
 
+st.sidebar.header("Select customer")
+xx = list(set(dataAll.sort_values('name',ascending = False).query("name == name")['name'].to_list()))
+xx.sort()
+selection_customers = ['All'] + xx
+print(f"{selection_customers}")
+customer_selectbox = st.sidebar.selectbox("Select customer", selection_customers)
+
+
+if customer_selectbox == "All":
+    charge_data = charge_data
+    
+else:
+    charge_data = charge_data.query("name == @customer_selectbox")
 
 # Organise the columns
 col1, col2 = st.beta_columns(2)
 
 # Plot the gross income
-gross = dataAll.query("reporting_category == 'charge'").assign(datee = lambda x: x['date'].apply(lambda y: datetime(y.year, y.month,1))).groupby('datee', as_index = False)\
+gross = charge_data.query("reporting_category == 'charge'").assign(datee = lambda x: x['date'].apply(lambda y: datetime(y.year, y.month,1))).groupby('datee', as_index = False)\
         .agg(total = ('amount','sum'))
 plt.figure(num = 'fig1', figsize=(10, 5))
 plt.plot(gross['datee'], gross['total'],'.-')
 
 # Plot the net income
-net = dataAll.query("reporting_category == 'charge' or reporting_category == 'refund'")\
+net = charge_data.query("reporting_category == 'charge' or reporting_category == 'refund'")\
         .assign(datee = lambda x: x['date'].apply(lambda y: datetime(y.year, y.month,1)))\
         .groupby('datee', as_index = False)\
         .agg(charge_amt = ('net','sum'))
 
-total_payments = dataAll.query("reporting_category == 'charge'")\
+total_payments = charge_data.query("reporting_category == 'charge'")\
         .assign(datee = lambda x: x['date'].apply(lambda y: datetime(y.year, y.month,1)))\
         .groupby('datee', as_index = False)\
         .agg(payments = ('net','count'))
@@ -101,4 +137,4 @@ col1.pyplot(plt.figure(num = 'fig1'))
 col2.pyplot(plt.figure(num = 'fig2'))
 
 st.subheader('Transaction data')
-st.write(charge_data[["date","description","amount","fee","net","type"]])
+st.write(charge_data[["date",'name',"description","amount","fee","net","type"]])
