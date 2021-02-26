@@ -97,7 +97,6 @@ st.sidebar.header("Select customer")
 xx = list(set(dataAll.sort_values('name',ascending = False).query("name == name")['name'].to_list()))
 xx.sort()
 selection_customers = ['All'] + xx
-print(f"{selection_customers}")
 customer_selectbox = st.sidebar.selectbox("Select customer", selection_customers)
 
 
