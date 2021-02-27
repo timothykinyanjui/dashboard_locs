@@ -4,6 +4,10 @@ import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 import streamlit as st
 
+# Distinguisghes the names and name
+def distinguish(x,y):
+    return x if x == x else y
+
 # Load data function
 @st.cache
 def load_data(user_input:str) -> pd.DataFrame:
@@ -36,10 +40,17 @@ def load_data(user_input:str) -> pd.DataFrame:
         # Get the data in pandas frame
         names = char_iter["billing_details"]["name"]
         t_id = char_iter["balance_transaction"]
-        dataCharge = dataCharge.append(pd.DataFrame({'id': t_id, 'name': names}, index = [0]))
+        c_id = char_iter['id']
+        email = char_iter['receipt_email']
+        dataCharge = dataCharge.append(pd.DataFrame({'id': t_id, 'name': names, 'email':email}, index = [0]))
+
+    temp_data = dataCharge.groupby('email', as_index = False).agg(names = ('name','first'))
+
+    # Get the unique names (still duplicated in email exist)
+    dataChargeT = dataCharge.merge(temp_data, on = 'email', how = 'left').assign(name = lambda x: x.apply(lambda y: distinguish(y['names'], y['name']), axis = 1))
 
     # Join the customer data
-    dataAll = data.merge(dataCharge, on = 'id', how = 'left')
+    dataAll = data.merge(dataChargeT, on = 'id', how = 'left')
     
     return dataAll
 
