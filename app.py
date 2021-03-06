@@ -9,8 +9,8 @@ import plotly.graph_objects as go
 from google.cloud import storage
 
 # Only needed locally
-os.environ.setdefault("GOOGLE_APPLICATION_CREDENTIALS",
-    r"C:\Users\tkinyanjui\AppData\Local\Google\loginfile.json")
+#os.environ.setdefault("GOOGLE_APPLICATION_CREDENTIALS",
+#    r"C:\Users\tkinyanjui\AppData\Local\Google\loginfile.json")
 
 # Get stripe key
 storage_client = storage.Client()
