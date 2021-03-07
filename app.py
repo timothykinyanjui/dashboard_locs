@@ -10,7 +10,7 @@ from google.cloud import storage
 
 # Only needed locally
 #os.environ.setdefault("GOOGLE_APPLICATION_CREDENTIALS",
-#    r"C:\Users\tkinyanjui\AppData\Local\Google\loginfile.json")
+    #r"C:\Users\tkinyanjui\AppData\Local\Google\loginfile.json")
 
 # Get stripe key
 storage_client = storage.Client()
@@ -205,6 +205,42 @@ col1.subheader(f"Total: £ {round(gross['total'].sum(),2)}. Net: £ {round(net['
 col2.subheader(f"Total number of payments: {total_payments['payments'].sum()}")
 col1.plotly_chart(fig1,  use_container_width = True)
 col2.plotly_chart(fig2,  use_container_width = True)
+
+# Plot to show customer segments by spend
+fig3 = go.Figure()
+gross_segments = charge_data.query("reporting_category == 'charge'").groupby('name', as_index = False).agg(total = ('amount','sum'))
+fig3.add_trace(go.Scatter(x = gross_segments["name"], y = gross_segments["total"],
+                    mode='markers',
+                    marker = dict(
+                        size=16,
+                        color = gross_segments['total'], #set color equal to a variable
+                        showscale=True)
+    ))
+fig3.update_layout(
+    autosize = False,
+    width = 960,
+    height = 480,
+    margin=dict(
+        l = 50,
+        r = 50,
+        b = 50,
+        t = 50,
+        pad = 10
+    ),
+    paper_bgcolor="white",
+    yaxis = dict(
+        title_text="Income",
+        showgrid = False,
+        showticklabels = False),
+
+    xaxis = dict(
+        title_text = "Customer",
+        showgrid = False,
+        showticklabels = False),
+
+    template = "plotly_white"
+)
+st.plotly_chart(fig3,  use_container_width = True)
 
 st.subheader('Transaction data')
 st.write(charge_data[["date",'name',"description","amount","fee","net","type"]])
