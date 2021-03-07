@@ -10,7 +10,7 @@ from google.cloud import storage
 
 # Only needed locally
 #os.environ.setdefault("GOOGLE_APPLICATION_CREDENTIALS",
-    #r"C:\Users\tkinyanjui\AppData\Local\Google\loginfile.json")
+#    r"C:\Users\tkinyanjui\AppData\Local\Google\loginfile.json")
 
 # Get stripe key
 storage_client = storage.Client()
@@ -73,7 +73,7 @@ def load_data(user_input:str) -> pd.DataFrame:
 st.set_page_config(layout="wide")
 
 # Title for the app
-st.title(f"Beth's Sisterlocs dashboard")
+st.title(f"The Locplace Dashboard")
 
 # Input text
 #st.sidebar.header("Enter text")
@@ -205,6 +205,8 @@ col1.subheader(f"Total: £ {round(gross['total'].sum(),2)}. Net: £ {round(net['
 col2.subheader(f"Total number of payments: {total_payments['payments'].sum()}")
 col1.plotly_chart(fig1,  use_container_width = True)
 col2.plotly_chart(fig2,  use_container_width = True)
+
+st.subheader(f"Customer segments")
 
 # Plot to show customer segments by spend
 fig3 = go.Figure()
