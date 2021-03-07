@@ -1,8 +1,23 @@
+import os
 import stripe
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 import streamlit as st
+import plotly.express as px
+import plotly.graph_objects as go
+from google.cloud import storage
+
+# Only needed locally
+#os.environ.setdefault("GOOGLE_APPLICATION_CREDENTIALS",
+#    r"C:\Users\tkinyanjui\AppData\Local\Google\loginfile.json")
+
+# Get stripe key
+storage_client = storage.Client()
+bucket = storage_client.bucket('salon-website-252622.appspot.com')
+blob = bucket.blob('stripe_key')
+downloaded_file = blob.download_as_string()
+user_input = downloaded_file.decode('utf-8')
 
 # Distinguisghes the names and name
 def distinguish(x,y):
@@ -58,11 +73,11 @@ def load_data(user_input:str) -> pd.DataFrame:
 st.set_page_config(layout="wide")
 
 # Title for the app
-st.title(f"Beth's Sisterlocs dashboard")
+st.title(f"The Locplace Dashboard")
 
 # Input text
-st.sidebar.header("Enter text")
-user_input = st.sidebar.text_input("Enter text")
+#st.sidebar.header("Enter text")
+#user_input = st.sidebar.text_input("Enter text")
 
 # Select dates
 st.sidebar.header("Select dates of interest")
@@ -123,8 +138,31 @@ col1, col2 = st.beta_columns(2)
 # Plot the gross income
 gross = charge_data.query("reporting_category == 'charge'").assign(datee = lambda x: x['date'].apply(lambda y: datetime(y.year, y.month,1))).groupby('datee', as_index = False)\
         .agg(total = ('amount','sum'))
-plt.figure(num = 'fig1', figsize=(10, 5))
-plt.plot(gross['datee'], gross['total'],'.-')
+#plt.figure(num = 'fig1', figsize=(10, 5))
+#plt.plot(gross['datee'], gross['total'],'.-')
+
+#fig1 = px.line(gross, x="datee", y="total", width = 960, height = 480)
+fig1 = go.Figure()
+fig1.add_trace(go.Scatter(x = gross["datee"], y = gross["total"],
+                    mode='lines+markers'))
+fig1.update_layout(
+    autosize = False,
+    width = 960,
+    height = 480,
+    margin=dict(
+        l = 50,
+        r = 50,
+        b = 50,
+        t = 50,
+        pad = 10
+    ),
+    paper_bgcolor="white",
+    yaxis=dict(
+        title_text="Total Spent"),
+    xaxis = dict(
+        title_text = "Date"),
+    template = "plotly_white"
+)
 
 # Plot the net income
 net = charge_data.query("reporting_category == 'charge' or reporting_category == 'refund'")\
@@ -137,14 +175,74 @@ total_payments = charge_data.query("reporting_category == 'charge'")\
         .groupby('datee', as_index = False)\
         .agg(payments = ('net','count'))
 
-plt.figure(num = 'fig2', figsize=(10, 5))
-plt.plot(total_payments['datee'], total_payments['payments'],'.-')
+#plt.figure(num = 'fig2', figsize=(10, 5))
+#plt.plot(total_payments['datee'], total_payments['payments'],'.-')
+#fig2 = px.line(total_payments, x="datee", y="payments", width = 960, height = 480)
+fig2 = go.Figure()
+fig2.add_trace(go.Scatter(x = total_payments["datee"], y = total_payments["payments"],
+                    mode='lines+markers'))
+fig2.update_layout(
+    autosize = False,
+    width = 960,
+    height = 480,
+    margin=dict(
+        l = 50,
+        r = 50,
+        b = 50,
+        t = 50,
+        pad = 10
+    ),
+    paper_bgcolor="white",
+    yaxis=dict(
+        title_text="No of payments"),
+    xaxis = dict(
+        title_text = "Date"),
+    template = "plotly_white"
+)
 
 # Two columns
 col1.subheader(f"Total: £ {round(gross['total'].sum(),2)}. Net: £ {round(net['charge_amt'].sum(),2)}")
 col2.subheader(f"Total number of payments: {total_payments['payments'].sum()}")
-col1.pyplot(plt.figure(num = 'fig1'))
-col2.pyplot(plt.figure(num = 'fig2'))
+col1.plotly_chart(fig1,  use_container_width = True)
+col2.plotly_chart(fig2,  use_container_width = True)
+
+st.subheader(f"Customer segments")
+
+# Plot to show customer segments by spend
+fig3 = go.Figure()
+gross_segments = charge_data.query("reporting_category == 'charge'").groupby('name', as_index = False).agg(total = ('amount','sum'))
+fig3.add_trace(go.Scatter(x = gross_segments["name"], y = gross_segments["total"],
+                    mode='markers',
+                    marker = dict(
+                        size=16,
+                        color = gross_segments['total'], #set color equal to a variable
+                        showscale=True)
+    ))
+fig3.update_layout(
+    autosize = False,
+    width = 960,
+    height = 480,
+    margin=dict(
+        l = 50,
+        r = 50,
+        b = 50,
+        t = 50,
+        pad = 10
+    ),
+    paper_bgcolor="white",
+    yaxis = dict(
+        title_text="Income",
+        showgrid = False,
+        showticklabels = False),
+
+    xaxis = dict(
+        title_text = "Customer",
+        showgrid = False,
+        showticklabels = False),
+
+    template = "plotly_white"
+)
+st.plotly_chart(fig3,  use_container_width = True)
 
 st.subheader('Transaction data')
 st.write(charge_data[["date",'name',"description","amount","fee","net","type"]])
