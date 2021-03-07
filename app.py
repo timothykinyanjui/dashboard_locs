@@ -245,4 +245,4 @@ fig3.update_layout(
 st.plotly_chart(fig3,  use_container_width = True)
 
 st.subheader('Transaction data')
-st.write(charge_data[["date",'name',"description","amount","fee","net","type"]])
+st.dataframe(charge_data[["date",'name',"description","amount","fee","net","type"]], height = 500)
